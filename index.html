@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClaimCheck — Is This Bullshit?</title>
+  <meta name="description" content="ClaimCheck asks the question no one else does: Is this Bullshit? We trace public claims from tech leaders through conflict-of-interest chains and score how self-serving each statement really is." />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>" />
+  <script type="module" src="/src/main.js"></script>
+</head>
+<body>
+
+  <!-- ── NAV ──────────────────────────────────────────────── -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="#" class="nav-logo">
+        <span class="nav-logo-dot"></span>
+        ClaimCheck
+      </a>
+      <ul class="nav-links">
+        <li><a href="#analyzer">Analyze</a></li>
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#speakers">Speakers</a></li>
+        <li><a href="https://github.com" class="nav-cta">View on GitHub</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ── HERO ─────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="hero-orb hero-orb-1"></div>
+      <div class="hero-orb hero-orb-2"></div>
+      <div class="hero-orb hero-orb-3"></div>
+    </div>
+
+    <div class="container" style="position:relative;z-index:1">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        Conflict-of-Interest Analysis Engine
+      </div>
+
+      <h1 class="hero-title">
+        Is This<br>
+        <span class="hero-title-accent">Bullshit?</span>
+      </h1>
+
+      <p class="hero-subtitle">
+        Tech founders and VCs make bold public claims that sound like insight but smell like profit. ClaimCheck traces every statement through a conflict-of-interest chain and scores exactly how self-serving it is.
+      </p>
+
+      <div class="hero-ticker">
+        <span class="hero-ticker-label">LIVE CLAIM</span>
+        <span id="hero-ticker-text">Loading examples...</span>
+      </div>
+
+      <div class="hero-actions">
+        <button class="btn btn-primary" id="hero-cta">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Analyze a Claim
+        </button>
+        <a href="#how-it-works" class="btn btn-ghost">How It Works</a>
+      </div>
+
+      <div class="hero-stats">
+        <div>
+          <div class="hero-stat-value">9</div>
+          <div class="hero-stat-label">Tier 1 profiles</div>
+        </div>
+        <div>
+          <div class="hero-stat-value">$1.3T+</div>
+          <div class="hero-stat-label">Stakes tracked</div>
+        </div>
+        <div>
+          <div class="hero-stat-value">5-hop</div>
+          <div class="hero-stat-label">Causal chain depth</div>
+        </div>
+        <div>
+          <div class="hero-stat-value">0–100</div>
+          <div class="hero-stat-label">BS Percentile score</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── ANALYZER ──────────────────────────────────────────── -->
+  <section class="analyzer-section" id="analyzer">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">Claim Analyzer</span>
+        <h2 class="section-title">So… Is This Bullshit?</h2>
+        <p class="section-desc">Paste any public claim from a tech leader. We'll trace the conflict chain and tell you exactly how self-serving it is.</p>
+      </div>
+
+      <div class="analyzer-card">
+        <div class="form-row">
+          <div class="form-group" style="flex:1">
+            <label class="form-label" for="claim-text">The Claim</label>
+            <textarea
+              id="claim-text"
+              class="form-textarea"
+              placeholder='e.g. "Every employee paid $500K should be burning $250K in AI tokens a year." — Jensen Huang'
+              rows="3"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="speaker-select">Speaker</label>
+            <select id="speaker-select" class="form-select">
+              <option value="" disabled selected>Select speaker…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-bottom">
+          <div class="sample-claim-pills">
+            <span class="sample-label">Try an example:</span>
+            <div id="sample-pills" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+          </div>
+          <button class="btn-analyze" id="analyze-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Analyze
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div class="loading-state" id="loading-state">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loading-status-text">Starting analysis...</div>
+        <div class="loading-chain">
+          <div class="loading-step" id="step-decompose">
+            <div class="loading-step-icon">📋</div>
+            <div class="loading-step-label">Decomposing claim</div>
+          </div>
+          <div class="loading-arrow"></div>
+          <div class="loading-step" id="step-hypothesize">
+            <div class="loading-step-icon">🔭</div>
+            <div class="loading-step-label">Generating hypotheses</div>
+          </div>
+          <div class="loading-arrow"></div>
+          <div class="loading-step" id="step-match">
+            <div class="loading-step-icon">🔗</div>
+            <div class="loading-step-label">Matching ties</div>
+          </div>
+          <div class="loading-arrow"></div>
+          <div class="loading-step" id="step-score">
+            <div class="loading-step-icon">📊</div>
+            <div class="loading-step-label">Scoring BS</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── RESULTS ───────────────────────────────────────────── -->
+  <section class="results-section" id="results-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">Analysis Result</span>
+        <h2 class="section-title">Verdict: Is It Bullshit?</h2>
+      </div>
+
+      <div class="results-card">
+        <!-- Results Header -->
+        <div class="results-header">
+          <div class="results-claim-info">
+            <div class="results-claim-quote" id="result-claim-quote"></div>
+            <div class="results-speaker">
+              <div class="speaker-avatar-sm" id="result-speaker-avatar"></div>
+              <div>
+                <div class="speaker-name-sm" id="result-speaker-name"></div>
+                <div class="speaker-title-sm" id="result-speaker-title"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="results-score-widget">
+            <div class="score-gauge-wrap">
+              <canvas id="results-gauge-canvas" width="160" height="100"></canvas>
+              <div class="score-number" id="score-number">0</div>
+            </div>
+            <div class="score-label-pill" id="score-label">ANALYZING…</div>
+            <div class="score-breakdown">
+              <div class="score-comp">
+                <div class="score-comp-bar">
+                  <div class="score-comp-fill" id="bar-connection" style="height:0%"></div>
+                </div>
+                <div class="score-comp-val" id="bar-connection-val">—</div>
+                <div class="score-comp-label">Conflict Rate</div>
+              </div>
+              <div class="score-comp">
+                <div class="score-comp-bar">
+                  <div class="score-comp-fill" id="bar-directness" style="height:0%"></div>
+                </div>
+                <div class="score-comp-val" id="bar-directness-val">—</div>
+                <div class="score-comp-label">Directness</div>
+              </div>
+              <div class="score-comp">
+                <div class="score-comp-bar">
+                  <div class="score-comp-fill" id="bar-magnitude" style="height:0%"></div>
+                </div>
+                <div class="score-comp-val" id="bar-magnitude-val">—</div>
+                <div class="score-comp-label">Magnitude</div>
+              </div>
+              <div class="score-comp">
+                <div class="score-comp-bar">
+                  <div class="score-comp-fill" id="bar-extremity" style="height:0%"></div>
+                </div>
+                <div class="score-comp-val" id="bar-extremity-val">—</div>
+                <div class="score-comp-label">Extremity</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Body -->
+        <div class="results-body">
+          <!-- Left column -->
+          <div class="results-col">
+            <!-- Claim Decomposition -->
+            <div class="results-panel">
+              <div class="panel-title">📋 Claim Decomposition</div>
+              <div class="decomp-item">
+                <div class="decomp-key">Implied Action</div>
+                <div class="decomp-value" id="decomp-action">—</div>
+              </div>
+              <div class="decomp-item">
+                <div class="decomp-key">Economic Domain</div>
+                <div class="decomp-value" id="decomp-domain">—</div>
+              </div>
+              <div class="decomp-item">
+                <div class="decomp-key">Extremity Score</div>
+                <div class="decomp-value" id="decomp-extremity-val">—</div>
+                <div class="extremity-bar">
+                  <div class="extremity-fill" id="extremity-fill" style="width:0%"></div>
+                </div>
+                <div class="decomp-value" style="font-size:0.8rem;color:var(--text-3);margin-top:6px" id="decomp-extremity-reason">—</div>
+              </div>
+            </div>
+
+            <!-- What Made Us Doubt -->
+            <div class="results-panel">
+              <div class="panel-title">🤔 What Made Us Doubt</div>
+              <ul class="concern-list" id="doubt-list"></ul>
+            </div>
+
+            <!-- To Be Fair -->
+            <div class="results-panel">
+              <div class="panel-title">⚖️ To Be Fair</div>
+              <ul class="concern-list" id="fair-list"></ul>
+            </div>
+          </div>
+
+          <!-- Right column -->
+          <div class="results-col">
+            <!-- Conflict Chains -->
+            <div class="results-panel">
+              <div class="panel-title">🔗 Conflict Chains</div>
+              <div id="hypotheses-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BS Reasoning Summary -->
+        <div class="bs-reasoning-banner" id="bs-reasoning-banner">
+          <div class="bs-reasoning-label">🔥 Why We Call Bullshit</div>
+          <div class="bs-reasoning-text" id="verdict-text">—</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── HOW IT WORKS ──────────────────────────────────────── -->
+  <section class="how-section" id="how-it-works">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">Methodology</span>
+        <h2 class="section-title">How It Works</h2>
+        <p class="section-desc">Every claim passes through a multi-step conflict-of-interest causal chain.</p>
+      </div>
+
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="how-step-num">📢</div>
+          <div>
+            <div class="how-step-title">Claim Input</div>
+            <div class="how-step-desc">Public statement from a tech leader, with speaker identified</div>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-step-num">📋</div>
+          <div>
+            <div class="how-step-title">Decompose</div>
+            <div class="how-step-desc">Extract implied action, economic domain, and extremity score</div>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-step-num">🔭</div>
+          <div>
+            <div class="how-step-title">Hypothesize</div>
+            <div class="how-step-desc">Generate 5 independent causal chains: who economically benefits?</div>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-step-num">🔗</div>
+          <div>
+            <div class="how-step-title">Match Ties</div>
+            <div class="how-step-desc">Cross-reference beneficiaries against the speaker's financial ties DB</div>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-step-num">📊</div>
+          <div>
+            <div class="how-step-title">BS Score</div>
+            <div class="how-step-desc">Weighted 0–100 percentile: connection rate, directness, magnitude, extremity</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:var(--gap-2xl);background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--gap-xl)">
+        <div class="section-label" style="margin-bottom:var(--gap-md)">Score Interpretation</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--gap-md)">
+          <div style="padding:var(--gap-md);background:var(--green-dim);border:1px solid rgba(34,197,94,0.2);border-radius:var(--r-md)">
+            <div style="font-size:1.5rem;font-weight:700;color:var(--green);font-family:var(--font-heading)">0–20</div>
+            <div style="font-weight:600;color:var(--text);font-size:0.85rem;margin:4px 0">Mostly Genuine</div>
+            <div style="font-size:0.75rem;color:var(--text-3)">Claim has limited direct financial benefit for speaker</div>
+          </div>
+          <div style="padding:var(--gap-md);background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.15);border-radius:var(--r-md)">
+            <div style="font-size:1.5rem;font-weight:700;color:#86efac;font-family:var(--font-heading)">20–40</div>
+            <div style="font-weight:600;color:var(--text);font-size:0.85rem;margin:4px 0">Mildly Biased</div>
+            <div style="font-size:0.75rem;color:var(--text-3)">Some indirect ties exist, but claim may still be valid</div>
+          </div>
+          <div style="padding:var(--gap-md);background:var(--yellow-dim);border:1px solid rgba(245,158,11,0.2);border-radius:var(--r-md)">
+            <div style="font-size:1.5rem;font-weight:700;color:var(--yellow);font-family:var(--font-heading)">40–65</div>
+            <div style="font-weight:600;color:var(--text);font-size:0.85rem;margin:4px 0">Somewhat Biased</div>
+            <div style="font-size:0.75rem;color:var(--text-3)">Clear conflicts present — read carefully</div>
+          </div>
+          <div style="padding:var(--gap-md);background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.2);border-radius:var(--r-md)">
+            <div style="font-size:1.5rem;font-weight:700;color:var(--accent-2);font-family:var(--font-heading)">65–85</div>
+            <div style="font-weight:600;color:var(--text);font-size:0.85rem;margin:4px 0">Self-Serving</div>
+            <div style="font-size:0.75rem;color:var(--text-3)">Multiple direct financial ties confirmed</div>
+          </div>
+          <div style="padding:var(--gap-md);background:var(--red-dim);border:1px solid rgba(239,68,68,0.2);border-radius:var(--r-md)">
+            <div style="font-size:1.5rem;font-weight:700;color:var(--red);font-family:var(--font-heading)">85–100</div>
+            <div style="font-weight:600;color:var(--text);font-size:0.85rem;margin:4px 0">Highly Self-Serving</div>
+            <div style="font-size:0.75rem;color:var(--text-3)">Textbook "talking their book" — extreme caution advised</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SPEAKERS ──────────────────────────────────────────── -->
+  <section id="speakers">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">Tier 1 Database</span>
+        <h2 class="section-title">Hand-Curated Speaker Profiles</h2>
+        <p class="section-desc">Each profile contains rigorously verified financial ties — the competitive moat of this tool. Click any card to analyze a claim from that speaker.</p>
+      </div>
+
+      <div class="speakers-grid" id="speakers-grid"></div>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ────────────────────────────────────────────── -->
+  <footer class="footer">
+    <div class="container">
+      <div class="disclaimer">
+        ⚠️ ClaimCheck is an educational and analytical tool. All analysis is based on publicly available information and does not constitute financial or legal advice. BS scores reflect potential conflicts of interest, not accusations of wrongdoing.
+      </div>
+      <div class="footer-inner">
+        <div class="footer-logo">🔍 ClaimCheck</div>
+        <div class="footer-meta">
+          <span>Built with DeepSeek V3 via OpenRouter</span>
+          <span class="footer-divider"></span>
+          <span>9 Tier 1 profiles tracked</span>
+          <span class="footer-divider"></span>
+          <span>2025</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -1,8 +1,10 @@
 # Dependencies
 node_modules/
+node_modules
 
 # Build output
 dist/
+dist
 
 # Environment variables
 .env
@@ -14,3 +16,14 @@ dist/
 
 # Debug logs
 *.log
+
+# Project specific
+.gemini
+.agents
+.agent
+_agents
+_agent
+brain
+implementation_plan.md
+walkthrough.md
+task.md
