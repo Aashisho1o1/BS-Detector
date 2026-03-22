@@ -2,15 +2,31 @@ import './style.css';
 import { PERSON_DB, SAMPLE_CLAIMS, MOCK_RESULTS } from './data.js';
 
 // ============================================================
+// CONSTANTS
+// ============================================================
+const GAUGE = { WIDTH: 160, HEIGHT: 100, RADIUS: 72, LINE_WIDTH: 14 };
+const ANIMATION = { GAUGE_DURATION: 1200, LOADING_STEP_DELAY: 700, TICKER_INTERVAL: 4000, TICKER_FADE: 400 };
+const API = { TIMEOUT_MS: 120000, MAX_CLAIM_LENGTH: 1000 };
+
+// ============================================================
+// SECURITY — HTML escape utility
+// ============================================================
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(String(str)));
+  return div.innerHTML;
+}
+
+// ============================================================
 // GAUGE — Canvas-based semi-circular score meter
 // ============================================================
 function drawGauge(canvas, score, animated = true) {
   const ctx = canvas.getContext('2d');
-  const W = canvas.width = 160;
-  const H = canvas.height = 100;
+  const W = canvas.width = GAUGE.WIDTH;
+  const H = canvas.height = GAUGE.HEIGHT;
   const cx = W / 2;
   const cy = H - 8;
-  const r = 72;
+  const r = GAUGE.RADIUS;
   const startAngle = Math.PI;
   const endAngle = 2 * Math.PI;
 
@@ -46,7 +62,7 @@ function drawGauge(canvas, score, animated = true) {
     ctx.beginPath();
     ctx.arc(cx, cy, r, startAngle, endAngle);
     ctx.strokeStyle = 'rgba(255,255,255,0.07)';
-    ctx.lineWidth = 14;
+    ctx.lineWidth = GAUGE.LINE_WIDTH;
     ctx.lineCap = 'round';
     ctx.stroke();
 
@@ -60,7 +76,7 @@ function drawGauge(canvas, score, animated = true) {
       ctx.beginPath();
       ctx.arc(cx, cy, r, startAngle, fillEnd);
       ctx.strokeStyle = gradient;
-      ctx.lineWidth = 14;
+      ctx.lineWidth = GAUGE.LINE_WIDTH;
       ctx.lineCap = 'round';
       ctx.stroke();
     }
@@ -87,7 +103,7 @@ function drawGauge(canvas, score, animated = true) {
   }
 
   let start = null;
-  const duration = 1200;
+  const duration = ANIMATION.GAUGE_DURATION;
   const targetPct = score / 100;
 
   function animate(ts) {
@@ -115,26 +131,34 @@ function renderSpeakerCards() {
     card.style.setProperty('--speaker-color', person.color);
     card.style.cssText += `border-top: 2px solid ${person.color}22;`;
 
-    card.addEventListener('click', () => {
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', `Analyze claims by ${person.name}`);
+
+    const selectSpeaker = () => {
       document.getElementById('speaker-select').value = id;
       document.getElementById('analyzer').scrollIntoView({ behavior: 'smooth' });
+    };
+    card.addEventListener('click', selectSpeaker);
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectSpeaker(); }
     });
 
     const tickerBadge = person.primary_ticker
-      ? `<span class="speaker-ticker">${person.primary_ticker}</span>`
+      ? `<span class="speaker-ticker">${escapeHTML(person.primary_ticker)}</span>`
       : '';
 
     const ties = person.financial_ties
       .slice(0, 3)
-      .map(t => `<span class="tie-chip">${t.type}: ${t.entity.split('(')[0].trim()}</span>`)
+      .map(t => `<span class="tie-chip">${escapeHTML(t.type)}: ${escapeHTML(t.entity.split('(')[0].trim())}</span>`)
       .join('');
 
     card.innerHTML = `
       <div class="speaker-card-top">
-        <div class="speaker-avatar" style="background: linear-gradient(135deg, ${person.color}, ${person.color}88)">${person.initials}</div>
+        <div class="speaker-avatar" style="background: linear-gradient(135deg, ${person.color}, ${person.color}88)">${escapeHTML(person.initials)}</div>
         <div class="speaker-info">
-          <div class="speaker-name">${person.name}</div>
-          <div class="speaker-title-text">${person.title}</div>
+          <div class="speaker-name">${escapeHTML(person.name)}</div>
+          <div class="speaker-title-text">${escapeHTML(person.title)}</div>
         </div>
         ${tickerBadge}
       </div>
@@ -284,8 +308,8 @@ function renderResults(result) {
     const matchCls = conn === 'DIRECT' ? 'connected-direct' : conn === 'INDIRECT' ? 'connected-indirect' : 'connected-none';
     const badgeCls = conn === 'DIRECT' ? 'match-direct' : conn === 'INDIRECT' ? 'match-indirect' : 'match-none';
 
-    // Parse chain arrows
-    const chainFormatted = hyp.chain.replace(/→/g, '<span class="hypothesis-chain-arrow">→</span>');
+    // Parse chain arrows (escape first, then replace arrow character)
+    const chainFormatted = escapeHTML(hyp.chain).replace(/→/g, '<span class="hypothesis-chain-arrow">→</span>');
 
     const item = document.createElement('div');
     item.className = `hypothesis-item ${matchCls}`;
@@ -293,12 +317,12 @@ function renderResults(result) {
       <div class="hypothesis-icon">${icon}</div>
       <div class="hypothesis-content">
         <div class="hypothesis-id">
-          ${hyp.id}
-          <span class="match-badge ${badgeCls}">${conn}</span>
-          ${match.confidence ? `<span style="font-size:0.62rem;color:var(--text-3)">${match.confidence} confidence</span>` : ''}
+          ${escapeHTML(hyp.id)}
+          <span class="match-badge ${badgeCls}">${escapeHTML(conn)}</span>
+          ${match.confidence ? `<span style="font-size:0.62rem;color:var(--text-3)">${escapeHTML(match.confidence)} confidence</span>` : ''}
         </div>
         <div class="hypothesis-chain">${chainFormatted}</div>
-        ${match.explanation ? `<div class="hypothesis-explanation">${match.explanation}</div>` : ''}
+        ${match.explanation ? `<div class="hypothesis-explanation">${escapeHTML(match.explanation)}</div>` : ''}
       </div>
     `;
     hypContainer.appendChild(item);
@@ -310,7 +334,7 @@ function renderResults(result) {
   (conflict.doubt_reasons || []).forEach((r, i) => {
     const li = document.createElement('li');
     li.className = 'concern-item';
-    li.innerHTML = `<span class="concern-bullet doubt-bullet">${i + 1}</span><span>${r}</span>`;
+    li.innerHTML = `<span class="concern-bullet doubt-bullet">${i + 1}</span><span>${escapeHTML(r)}</span>`;
     doubtList.appendChild(li);
   });
 
@@ -320,12 +344,15 @@ function renderResults(result) {
   (conflict.fair_points || []).forEach((r, i) => {
     const li = document.createElement('li');
     li.className = 'concern-item';
-    li.innerHTML = `<span class="concern-bullet fair-bullet">${i + 1}</span><span>${r}</span>`;
+    li.innerHTML = `<span class="concern-bullet fair-bullet">${i + 1}</span><span>${escapeHTML(r)}</span>`;
     fairList.appendChild(li);
   });
 
   // ── Verdict ──
   document.getElementById('verdict-text').textContent = conflict.bs_summary;
+
+  // ── Clear any prior mock notice ──
+  document.querySelector('.mock-data-notice')?.remove();
 
   // ── Show ──
   section.classList.add('visible');
@@ -351,7 +378,7 @@ function simulateLoading(callback) {
       const curr = document.getElementById(steps[current]);
       if (curr) curr.classList.add('active');
       current++;
-      setTimeout(nextStep, 700);
+      setTimeout(nextStep, ANIMATION.LOADING_STEP_DELAY);
     } else {
       setTimeout(callback, 200);
     }
@@ -363,13 +390,11 @@ function simulateLoading(callback) {
 // ============================================================
 // FORM SUBMIT
 // ============================================================
-const API_BASE_URL = 'https://ffe1-34-87-88-26.ngrok-free.app';
-
 async function handleSubmit() {
   const claimText = document.getElementById('claim-text').value.trim();
   const speakerId = document.getElementById('speaker-select').value;
 
-  if (!claimText) {
+  if (!claimText || claimText.length > API.MAX_CLAIM_LENGTH) {
     document.getElementById('claim-text').focus();
     document.getElementById('claim-text').style.borderColor = 'var(--accent)';
     setTimeout(() => document.getElementById('claim-text').style.borderColor = '', 1500);
@@ -405,14 +430,17 @@ async function handleSubmit() {
     if (msgIdx < statusMessages.length) {
       loadingText.textContent = statusMessages[msgIdx++];
     }
-  }, 700);
+  }, ANIMATION.LOADING_STEP_DELAY);
 
   simulateLoading(async () => {
     clearInterval(msgInterval);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API.TIMEOUT_MS);
+
     try {
-      // Call Live Python Backend
-      const response = await fetch(`${API_BASE_URL}/api/analyze`, {
+
+      const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -421,8 +449,10 @@ async function handleSubmit() {
         body: JSON.stringify({
           claim_text: claimText,
           speaker_id: speakerId
-        })
+        }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) throw new Error(`API Error: ${response.status}`);
       const apiResult = await response.json();
@@ -430,8 +460,22 @@ async function handleSubmit() {
       btn.disabled = false;
       loading.classList.remove('active');
 
-      // Attempt to adapt python's specific keys back to the frontend's expected format
+      // Adapt backend response keys to the frontend's expected format
       if (apiResult.components) {
+        // Backend hypotheses have {hypothesis, connection, confidence, explanation}
+        // Frontend expects hypotheses with {id, chain} and conflict.matches with {hypothesis, connection, confidence, explanation}
+        const rawHyps = apiResult.hypotheses || [];
+        const adaptedHyps = rawHyps.map(h => ({
+          id: h.hypothesis,
+          chain: h.explanation || '',
+        }));
+        const adaptedMatches = rawHyps.map(h => ({
+          hypothesis: h.hypothesis,
+          connection: h.connection || 'NONE',
+          confidence: h.confidence || '',
+          explanation: h.explanation || '',
+        }));
+
         renderResults({
           claim: claimText,
           speaker_id: speakerId,
@@ -443,12 +487,12 @@ async function handleSubmit() {
             extremity_score: apiResult.components.extremity_score || 0
           },
           decomposition: apiResult.decomposition || {},
-          hypotheses: apiResult.hypotheses || [],
+          hypotheses: adaptedHyps,
           conflict: {
-            matches: apiResult.hypotheses || [],
+            matches: adaptedMatches,
             doubt_reasons: apiResult.doubtReasons || [],
             fair_points: apiResult.fairPoints || [],
-            bs_summary: "Live Result Evaluated."
+            bs_summary: apiResult.bsSummary || 'Live analysis complete.',
           }
         });
       } else {
@@ -457,8 +501,9 @@ async function handleSubmit() {
       }
 
     } catch (err) {
-      console.warn("Live API Failed. Falling back to mock data.", err);
-      
+      clearTimeout(timeoutId);
+      console.warn("Live API failed. Falling back to mock data.", err);
+
       // Fallback: Find matching mock result
       const matchingMock = SAMPLE_CLAIMS.find(
         sc => sc.speaker === speakerId && sc.claim.toLowerCase() === claimText.toLowerCase()
@@ -492,13 +537,31 @@ async function handleSubmit() {
               extremity_reason: 'Demo mode — custom claims require the live backend',
             },
             hypotheses: [],
-            conflict: { matches: [], doubt_reasons: ['Live API connection failed', err.message], fair_points: [], bs_summary: 'Could not connect to Python backend.' },
+            conflict: { matches: [], doubt_reasons: ['Live API connection failed'], fair_points: [], bs_summary: 'Could not connect to Python backend.' },
             bs_score: { score: 0, connection_rate: 0, directness: 0, magnitude: 0, extremity_score: 0 },
           });
         }
       }
+
+      // Show mock data notice so users know this isn't live analysis
+      showMockNotice();
     }
   });
+}
+
+// ============================================================
+// MOCK DATA NOTICE
+// ============================================================
+function showMockNotice() {
+  // Remove any existing notice
+  document.querySelector('.mock-data-notice')?.remove();
+
+  const banner = document.getElementById('bs-reasoning-banner');
+  if (!banner) return;
+  const notice = document.createElement('div');
+  notice.className = 'mock-data-notice';
+  notice.textContent = 'Note: Live API unavailable. Showing pre-computed demo results.';
+  banner.parentNode.insertBefore(notice, banner);
 }
 
 // ============================================================
@@ -520,12 +583,12 @@ function startTicker() {
       ticker.textContent = headlines[idx % headlines.length];
       idx++;
       ticker.style.opacity = '1';
-    }, 400);
+    }, ANIMATION.TICKER_FADE);
   }
 
-  ticker.style.transition = 'opacity 0.4s';
+  ticker.style.transition = `opacity ${ANIMATION.TICKER_FADE / 1000}s`;
   cycle();
-  setInterval(cycle, 4000);
+  setInterval(cycle, ANIMATION.TICKER_INTERVAL);
 }
 
 // ============================================================
