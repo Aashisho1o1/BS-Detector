@@ -363,7 +363,9 @@ function simulateLoading(callback) {
 // ============================================================
 // FORM SUBMIT
 // ============================================================
-function handleSubmit() {
+const API_BASE_URL = 'https://ffe1-34-87-88-26.ngrok-free.app';
+
+async function handleSubmit() {
   const claimText = document.getElementById('claim-text').value.trim();
   const speakerId = document.getElementById('speaker-select').value;
 
@@ -378,11 +380,6 @@ function handleSubmit() {
     document.getElementById('speaker-select').focus();
     return;
   }
-
-  // Find matching mock result
-  const matchingMock = SAMPLE_CLAIMS.find(
-    sc => sc.speaker === speakerId && sc.claim.toLowerCase() === claimText.toLowerCase()
-  );
 
   // Show loading
   const btn = document.getElementById('analyze-btn');
@@ -410,39 +407,95 @@ function handleSubmit() {
     }
   }, 700);
 
-  simulateLoading(() => {
+  simulateLoading(async () => {
     clearInterval(msgInterval);
-    btn.disabled = false;
-    loading.classList.remove('active');
 
-    if (matchingMock && MOCK_RESULTS[matchingMock.id]) {
-      renderResults(MOCK_RESULTS[matchingMock.id]);
-    } else {
-      // Fallback: use the closest mock result for any input by the same speaker
-      const fallbackKey = Object.keys(MOCK_RESULTS).find(k =>
-        MOCK_RESULTS[k].speaker_id === speakerId
-      );
-      if (fallbackKey) {
-        const adapted = {
-          ...MOCK_RESULTS[fallbackKey],
-          claim: claimText,
-        };
-        renderResults(adapted);
-      } else {
-        // No available mock — show notice
+    try {
+      // Call Live Python Backend
+      const response = await fetch(`${API_BASE_URL}/api/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
+        body: JSON.stringify({
+          claim_text: claimText,
+          speaker_id: speakerId
+        })
+      });
+
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+      const apiResult = await response.json();
+      
+      btn.disabled = false;
+      loading.classList.remove('active');
+
+      // Attempt to adapt python's specific keys back to the frontend's expected format
+      if (apiResult.components) {
         renderResults({
           claim: claimText,
           speaker_id: speakerId,
-          decomposition: {
-            implied_action: 'Analysis pending (connect to live API)',
-            domain: 'N/A',
-            extremity: 5,
-            extremity_reason: 'Demo mode — custom claims require the live backend',
+          bs_score: {
+            score: apiResult.finalScore || 0,
+            connection_rate: apiResult.components.connection_rate || 0,
+            directness: apiResult.components.directness || 0,
+            magnitude: apiResult.components.magnitude || 0,
+            extremity_score: apiResult.components.extremity_score || 0
           },
-          hypotheses: [],
-          conflict: { matches: [], doubt_reasons: ['Live API not connected — this is a demo'], fair_points: [], bs_summary: 'Connect the Python backend to analyze custom claims.' },
-          bs_score: { score: 0, connection_rate: 0, directness: 0, magnitude: 0, extremity_score: 0 },
+          decomposition: apiResult.decomposition || {},
+          hypotheses: apiResult.hypotheses || [],
+          conflict: {
+            matches: apiResult.hypotheses || [],
+            doubt_reasons: apiResult.doubtReasons || [],
+            fair_points: apiResult.fairPoints || [],
+            bs_summary: "Live Result Evaluated."
+          }
         });
+      } else {
+        // Direct pass-through
+        renderResults(apiResult);
+      }
+
+    } catch (err) {
+      console.warn("Live API Failed. Falling back to mock data.", err);
+      
+      // Fallback: Find matching mock result
+      const matchingMock = SAMPLE_CLAIMS.find(
+        sc => sc.speaker === speakerId && sc.claim.toLowerCase() === claimText.toLowerCase()
+      );
+
+      btn.disabled = false;
+      loading.classList.remove('active');
+
+      if (matchingMock && MOCK_RESULTS[matchingMock.id]) {
+        renderResults(MOCK_RESULTS[matchingMock.id]);
+      } else {
+        // Fallback: use the closest mock result for any input by the same speaker
+        const fallbackKey = Object.keys(MOCK_RESULTS).find(k =>
+          MOCK_RESULTS[k].speaker_id === speakerId
+        );
+        if (fallbackKey) {
+          const adapted = {
+            ...MOCK_RESULTS[fallbackKey],
+            claim: claimText,
+          };
+          renderResults(adapted);
+        } else {
+          // No available mock — show notice
+          renderResults({
+            claim: claimText,
+            speaker_id: speakerId,
+            decomposition: {
+              implied_action: 'Analysis pending (connect to live API)',
+              domain: 'N/A',
+              extremity: 5,
+              extremity_reason: 'Demo mode — custom claims require the live backend',
+            },
+            hypotheses: [],
+            conflict: { matches: [], doubt_reasons: ['Live API connection failed', err.message], fair_points: [], bs_summary: 'Could not connect to Python backend.' },
+            bs_score: { score: 0, connection_rate: 0, directness: 0, magnitude: 0, extremity_score: 0 },
+          });
+        }
       }
     }
   });
