@@ -12,8 +12,8 @@
   ],
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://ffe1-34-87-88-26.ngrok-free.app/api/:path*"
+      "source": "/api/analyze",
+      "destination": "/api/analyze"
     }
   ]
 }
